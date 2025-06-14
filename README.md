@@ -87,7 +87,7 @@ graph TD
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seuuser/grpc-benchmark.git
+git clone https://github.com/AlexandreTSato/go-grpc-rab-bitmq-docker.git
 cd grpc-benchmark
 ```
 
