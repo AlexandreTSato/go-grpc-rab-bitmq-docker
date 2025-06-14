@@ -1,0 +1,54 @@
+version: "3.8"  # Define a versão do Compose; 3.8 é moderna e compatível com o Docker Desktop atual
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management    # Imagem oficial do RabbitMQ com interface de gerenciamento
+    container_name: rabbitmq        # Nome fixo para facilitar identificação e debug
+    ports:
+      - "5672:5672"                 # Porta AMQP (usada pelos apps para se conectar ao RabbitMQ)
+      - "15672:15672"               # Porta do painel web de gerenciamento
+    environment:
+      RABBITMQ_DEFAULT_USER: guest  # Usuário padrão
+      RABBITMQ_DEFAULT_PASS: guest  # Senha padrão
+    networks:
+      - benchmark-net               # Mesma rede para comunicação entre serviços
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  server:
+    build:
+      context: .                     # Define o diretório base para o build (raiz do projeto)
+      dockerfile: server/Dockerfile # Aponta explicitamente o Dockerfile do server
+    ports:
+      - "50051:50051"               # Expõe a porta gRPC do server para acesso externo
+    networks:
+      - benchmark-net               # Conecta o serviço à rede interna compartilhada
+    depends_on:
+      - rabbitmq                    # Garante que o RabbitMQ esteja pronto antes do server iniciar
+
+  client:
+    build:
+      context: .                     # Diretório base para build (raiz do projeto)
+      dockerfile: client/Dockerfile # Dockerfile específico do client
+    depends_on:
+      - server                      # Espera o server iniciar primeiro
+    networks:
+      - benchmark-net               # Conecta à mesma rede que server e rabbitmq
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    networks:
+      - benchmark-net               # Conecta à mesma rede que server e rabbitmq
+
+# Definição da rede compartilhada entre os serviços
+networks:
+  benchmark-net:
